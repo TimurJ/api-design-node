@@ -1,20 +1,21 @@
 import { env as loadEnv } from 'custom-env'
 import { z } from 'zod'
 
+// Determine application stage
 process.env.APP_STAGE = process.env.APP_STAGE || 'dev'
 
 const isProduction = process.env.APP_STAGE === 'production'
 const isDevelopment = process.env.APP_STAGE === 'dev'
 const isTest = process.env.APP_STAGE === 'test'
 
-// Load .env file
+// Load .env files based on environment
 if (isDevelopment) {
-  loadEnv()
+  loadEnv() // Loads .env
 } else if (isTest) {
-  loadEnv('test')
+  loadEnv('test') // Loads .env.test
 }
 
-// Define the schema with environment-specific requirements
+// Define validation schema with Zod
 const envSchema = z.object({
   // Node environment
   NODE_ENV: z
@@ -23,7 +24,7 @@ const envSchema = z.object({
 
   APP_STAGE: z.enum(['dev', 'production', 'test']).default('dev'),
 
-  // Server
+  // Server configuration
   PORT: z.coerce.number().positive().default(3000),
   HOST: z.string().default('localhost'),
 
@@ -32,7 +33,7 @@ const envSchema = z.object({
   DATABASE_POOL_MIN: z.coerce.number().min(0).default(2),
   DATABASE_POOL_MAX: z.coerce.number().positive().default(10),
 
-  // JWT & Auth
+  // JWT & Authentication
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
   JWT_EXPIRES_IN: z.string().default('7d'),
   REFRESH_TOKEN_SECRET: z.string().min(32).optional(),
@@ -41,7 +42,7 @@ const envSchema = z.object({
   // Security
   BCRYPT_ROUNDS: z.coerce.number().min(10).max(20).default(12),
 
-  // CORS
+  // CORS configuration
   CORS_ORIGIN: z
     .string()
     .or(z.array(z.string()))
@@ -59,7 +60,7 @@ const envSchema = z.object({
     .default(isProduction ? 'info' : 'debug'),
 })
 
-// Type for the validated environment
+// Type inference from schema
 export type Env = z.infer<typeof envSchema>
 
 // Parse and validate environment variables
@@ -69,16 +70,17 @@ try {
   env = envSchema.parse(process.env)
 } catch (error) {
   if (error instanceof z.ZodError) {
+    const tree = z.treeifyError(error)
     console.error('❌ Invalid environment variables:')
-    console.error(JSON.stringify(error.flatten().fieldErrors, null, 2))
+    console.error(JSON.stringify(tree, null, 2))
 
-    // More detailed error messages
-    error.errors.forEach((err) => {
-      const path = err.path.join('.')
-      console.error(`  ${path}: ${err.message}`)
+    // Detailed error messages
+    error.issues.forEach((issue) => {
+      const path = issue.path.join('.')
+      console.error(`  ${path}: ${issue.message}`)
     })
 
-    process.exit(1)
+    process.exit(1) // Exit with error code
   }
   throw error
 }
@@ -88,8 +90,6 @@ export const isProd = () => env.NODE_ENV === 'production'
 export const isDev = () => env.NODE_ENV === 'development'
 export const isTestEnv = () => env.NODE_ENV === 'test'
 
-// Export the validated environment object
+// Export the validated environment
 export { env }
-
-// Default export for convenience
 export default env
