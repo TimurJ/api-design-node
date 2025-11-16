@@ -29,7 +29,7 @@ app.get('/health', (req, res) => {
 })
 
 app.use('/api/auth', authRoutes)
-app.use('/api/habit', habitRoutes)
+app.use('/api/habits', habitRoutes)
 app.use('/api/user', userRoutes)
 
 // Export the app for use in other modules (like tests)
