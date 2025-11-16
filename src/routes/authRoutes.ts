@@ -5,7 +5,7 @@ import { insertUserSchema } from '../db/schema.ts'
 import z, { email } from 'zod'
 
 const loginSchema = z.object({
-  email: z.string(),
+  email: z.email(),
   password: z.string().min(1, 'password required'),
 })
 
